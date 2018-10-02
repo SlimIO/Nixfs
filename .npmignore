@@ -1,0 +1,8 @@
+test/
+build/
+.vscode/
+.eslintrc
+.editorconfig
+.gitignore
+jsdoc.json
+CONTRIBUTING.md
