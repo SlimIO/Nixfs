@@ -3,13 +3,13 @@
 #include <iostream>
 #include <errno.h>
 #include <string>
-#include <mntent.h>
 
 #if __FreeBSD__
 #include <sys/param.h>
 #include <sys/mount.h>
 #else
 #include <sys/statfs.h>
+#include <mntent.h>
 #endif
 
 using namespace Napi;
@@ -23,24 +23,59 @@ using namespace std;
  */
 Value getMountedEntries(const CallbackInfo& info) {
     Env env = info.Env();
-    struct mntent *mountedFS;
-    FILE *fileHandle;
     unsigned i = 0;
-
     Array ret = Array::New(env);
-    fileHandle = setmntent(_PATH_MOUNTED, "r");
-    while ((mountedFS = getmntent(fileHandle))) {
-        Object FS = Object::New(env);
-        ret[i] = FS;
-        FS.Set("dir", mountedFS->mnt_dir);
-        FS.Set("name", mountedFS->mnt_fsname);
-        FS.Set("type", mountedFS->mnt_type);
-        FS.Set("freq", mountedFS->mnt_freq);
-        FS.Set("passno", mountedFS->mnt_passno);
-        FS.Set("opts", mountedFS->mnt_opts);
-        i++;
-    }
-    endmntent(fileHandle);
+
+    #if __FreeBSD__
+        char line[256], devName[255], dirName[255], type[50], options[255];
+        unsigned int freq, passno;
+        int returnedElements;
+
+        cout << "open fd! " << endl;
+        auto fd = fopen("/etc/fstab", "r");
+        if (fd == NULL) {
+            stringstream err;
+            err << "failed to open /etc/fstab, error code: " << errno << endl;
+            Error::New(env, err.str()).ThrowAsJavaScriptException();
+            return env.Null();
+        }
+
+        while (fgets(line, sizeof(line), fd) != NULL) {
+            if (i == 0) {
+                i++;
+                continue;
+            }
+            returnedElements = sscanf(line, "%s %s %s %s %u %u",
+                devName, dirName, type, options, &freq, &passno);
+            Object FS = Object::New(env);
+            ret[i - 1] = FS;
+            FS.Set("dir", dirName);
+            FS.Set("name", devName);
+            FS.Set("type", type);
+            FS.Set("freq", freq);
+            FS.Set("passno", passno);
+            FS.Set("opts", options);
+            i++;
+        }
+        fclose(fd);
+    #else
+        struct mntent *mountedFS;
+        FILE *fileHandle;
+
+        fileHandle = setmntent(_PATH_MOUNTED, "r");
+        while ((mountedFS = getmntent(fileHandle))) {
+            Object FS = Object::New(env);
+            ret[i] = FS;
+            FS.Set("dir", mountedFS->mnt_dir);
+            FS.Set("name", mountedFS->mnt_fsname);
+            FS.Set("type", mountedFS->mnt_type);
+            FS.Set("freq", mountedFS->mnt_freq);
+            FS.Set("passno", mountedFS->mnt_passno);
+            FS.Set("opts", mountedFS->mnt_opts);
+            i++;
+        }
+        endmntent(fileHandle);
+    #endif
 
     return ret;
 }
@@ -87,14 +122,14 @@ Value getStatFS(const CallbackInfo& info) {
     ret.Set("ffree", Number::New(env, stat.f_ffree));
     ret.Set("availableSpace", Number::New(env, stat.f_bsize * stat.f_bavail));
     #if __FreeBSD__
-        ret.Set("nameLen", Number::New(env, stat.f_namemax));
+    ret.Set("nameLen", Number::New(env, stat.f_namemax));
     #else
-        Array fsid = Array::New(env, (size_t) 2);
-        for (unsigned i = 0; i<2; i++) {
-            fsid[i] = stat.f_fsid.__val[i];
-        }
-        ret.Set("fsid", fsid);
-        ret.Set("nameLen", Number::New(env, stat.f_namelen));
+    Array fsid = Array::New(env, (size_t) 2);
+    for (unsigned i = 0; i<2; i++) {
+        fsid[i] = stat.f_fsid.__val[i];
+    }
+    ret.Set("fsid", fsid);
+    ret.Set("nameLen", Number::New(env, stat.f_namelen));
     #endif
 
     return ret;
