@@ -3,8 +3,14 @@
 #include <iostream>
 #include <errno.h>
 #include <string>
-#include <sys/statfs.h>
 #include <mntent.h>
+
+#if __FreeBSD__
+#include <sys/param.h>
+#include <sys/mount.h>
+#else
+#include <sys/statfs.h>
+#endif
 
 using namespace Napi;
 using namespace std;
@@ -80,12 +86,16 @@ Value getStatFS(const CallbackInfo& info) {
     ret.Set("files", Number::New(env, stat.f_files));
     ret.Set("ffree", Number::New(env, stat.f_ffree));
     ret.Set("availableSpace", Number::New(env, stat.f_bsize * stat.f_bavail));
-    Array fsid = Array::New(env, (size_t) 2);
-    for (unsigned i = 0; i<2; i++) {
-        fsid[i] = stat.f_fsid.__val[i];
-    }
-    ret.Set("fsid", fsid);
-    ret.Set("nameLen", Number::New(env, stat.f_namelen));
+    #if __FreeBSD__
+        ret.Set("nameLen", Number::New(env, stat.f_namemax));
+    #else
+        Array fsid = Array::New(env, (size_t) 2);
+        for (unsigned i = 0; i<2; i++) {
+            fsid[i] = stat.f_fsid.__val[i];
+        }
+        ret.Set("fsid", fsid);
+        ret.Set("nameLen", Number::New(env, stat.f_namelen));
+    #endif
 
     return ret;
 }
