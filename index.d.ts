@@ -22,8 +22,26 @@ declare namespace Nixfs {
         nameLen: number;
     }
 
+    interface diskstat {
+        devName: string;
+        major: number;
+        minor: number;
+        rdIos: number;
+        rdMergesOrRdSec: number;
+        rdSecOrWrIos: number;
+        rdTicksOrWrSec: number;
+        wrIos: number;
+        wrMerges: number;
+        wrSec: number;
+        wrTicks: number;
+        iosPgr: number;
+        totTicks: number;
+        rqTicks: number;
+    }
+
     export function getMountedEntries(): mountentry[];
     export function getStatFS(dir: string): fsstat;
+    export function getDiskStats(): diskstat[];
 }
 
 export as namespace Nixfs;

@@ -1,2 +1,7 @@
+/** @type {Nixfs} */
 const nixfs = require("bindings")("nixfs");
-module.exports = nixfs;
+
+const nfs = nixfs.getMountedEntries();
+for (const fs of nfs) {
+    console.log(nixfs.getStatFS(fs.dir));
+}
