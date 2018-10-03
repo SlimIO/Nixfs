@@ -26,12 +26,11 @@ Value getMountedEntries(const CallbackInfo& info) {
     unsigned i = 0;
     Array ret = Array::New(env);
 
+    // On FreeBSD there is no mntent API (so we read /etc/fstab directly!)
     #if __FreeBSD__
         char line[256], devName[255], dirName[255], type[50], options[255];
         unsigned int freq, passno;
-        int returnedElements;
 
-        cout << "open fd! " << endl;
         auto fd = fopen("/etc/fstab", "r");
         if (fd == NULL) {
             stringstream err;
@@ -40,15 +39,12 @@ Value getMountedEntries(const CallbackInfo& info) {
             return env.Null();
         }
 
+        // Remove first line of the file (which contains tab info).
+        fgets(line, sizeof(line), fd);
         while (fgets(line, sizeof(line), fd) != NULL) {
-            if (i == 0) {
-                i++;
-                continue;
-            }
-            returnedElements = sscanf(line, "%s %s %s %s %u %u",
-                devName, dirName, type, options, &freq, &passno);
+            sscanf(line, "%s %s %s %s %u %u", devName, dirName, type, options, &freq, &passno);
             Object FS = Object::New(env);
-            ret[i - 1] = FS;
+            ret[i] = FS;
             FS.Set("dir", dirName);
             FS.Set("name", devName);
             FS.Set("type", type);
@@ -121,15 +117,17 @@ Value getStatFS(const CallbackInfo& info) {
     ret.Set("files", Number::New(env, stat.f_files));
     ret.Set("ffree", Number::New(env, stat.f_ffree));
     ret.Set("availableSpace", Number::New(env, stat.f_bsize * stat.f_bavail));
+
+    // On FreeBSD the returned struct is not the same
     #if __FreeBSD__
-    ret.Set("nameLen", Number::New(env, stat.f_namemax));
+        ret.Set("nameLen", Number::New(env, stat.f_namemax));
     #else
-    Array fsid = Array::New(env, (size_t) 2);
-    for (unsigned i = 0; i<2; i++) {
-        fsid[i] = stat.f_fsid.__val[i];
-    }
-    ret.Set("fsid", fsid);
-    ret.Set("nameLen", Number::New(env, stat.f_namelen));
+        Array fsid = Array::New(env, (size_t) 2);
+        for (unsigned i = 0; i<2; i++) {
+            fsid[i] = stat.f_fsid.__val[i];
+        }
+        ret.Set("fsid", fsid);
+        ret.Set("nameLen", Number::New(env, stat.f_namelen));
     #endif
 
     return ret;
