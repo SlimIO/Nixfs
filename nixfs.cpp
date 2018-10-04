@@ -28,7 +28,7 @@ Value getMountedEntries(const CallbackInfo& info) {
 
     // On FreeBSD there is no mntent API (so we read /etc/fstab directly!)
     #if __FreeBSD__
-        char line[256], devName[255], dirName[255], type[50], options[255];
+        char line[256], devName[256], dirName[255], type[20], options[255];
         unsigned int freq, passno;
 
         auto fd = fopen("/etc/fstab", "r");
@@ -76,6 +76,99 @@ Value getMountedEntries(const CallbackInfo& info) {
     return ret;
 }
 
+const char* getFileSystemType(long type) {
+    switch(type) {
+        case 0xadf5:
+            return "ADFS_SUPER_MAGIC";
+        case 0xADFF:
+            return "AFFS_SUPER_MAGIC";
+        case 0x42465331:
+            return "BEFS_SUPER_MAGIC";
+        case 0x1BADFACE:
+            return "BFS_MAGIC";
+        case 0xFF534D42:
+            return "CIFS_MAGIC_NUMBER";
+        case 0x73757245:
+            return "CODA_SUPER_MAGIC";
+        case 0x012FF7B7:
+            return "COH_SUPER_MAGIC";
+        case 0x28cd3d45:
+            return "CRAMFS_MAGIC";
+        case 0x1373:
+            return "DEVFS_SUPER_MAGIC";
+        case 0x00414A53:
+            return "EFS_SUPER_MAGIC";
+        case 0x137D:
+            return "EXT_SUPER_MAGIC";
+        case 0xEF51:
+            return "EXT2_OLD_SUPER_MAGIC";
+        case 0xEF53:
+            return "EXT2_SUPER_MAGIC";
+        case 0x4244:
+            return "HFS_SUPER_MAGIC";
+        case 0xF995E849:
+            return "HPFS_SUPER_MAGIC";
+        case 0x958458f6:
+            return "HUGETLBFS_MAGIC";
+        case 0x9660:
+            return "ISOFS_SUPER_MAGIC";
+        case 0x72b6:
+            return "JFFS2_SUPER_MAGIC";
+        case 0x3153464a:
+            return "JFS_SUPER_MAGIC";
+        case 0x137F:
+            return "MINIX_SUPER_MAGIC";
+        case 0x138F:
+            return "MINIX_SUPER_MAGIC2";
+        case 0x2468:
+            return "MINIX2_SUPER_MAGIC";
+        case 0x2478:
+            return "MINIX2_SUPER_MAGIC2";
+        case 0x4d44:
+            return "MSDOS_SUPER_MAGIC";
+        case 0x564c:
+            return "NCP_SUPER_MAGIC";
+        case 0x6969:
+            return "NFS_SUPER_MAGIC";
+        case 0x5346544e:
+            return "NTFS_SB_MAGIC";
+        case 0x9fa1:
+            return "OPENPROM_SUPER_MAGIC";
+        case 0x9fa0:
+            return "PROC_SUPER_MAGIC";
+        case 0x002f:
+            return "QNX4_SUPER_MAGIC";
+        case 0x52654973:
+            return "REISERFS_SUPER_MAGIC";
+        case 0x7275:
+            return "ROMFS_MAGIC";
+        case 0x517B:
+            return "SMB_SUPER_MAGIC";
+        case 0x012FF7B6:
+            return "SYSV2_SUPER_MAGIC";
+        case 0x012FF7B5:
+            return "SYSV4_SUPER_MAGIC";
+        case 0x01021994:
+            return "TMPFS_MAGIC";
+        case 0x15013346:
+            return "UDF_SUPER_MAGIC";
+        case 0x00011954:
+            return "UFS_MAGIC";
+        case 0x9fa2:
+            return "USBDEVICE_SUPER_MAGIC";
+        case 0xa501FCF5:
+            return "VXFS_SUPER_MAGIC";
+        case 0x012FF7B4:
+            return "XENIX_SUPER_MAGIC";
+        case 0x58465342:
+            return "XFS_SUPER_MAGIC";
+        case 0x012FD16D:
+            return "_XIAFS_SUPER_MAGIC";
+        default:
+            return "N/A";
+    }
+}
+
 /**
  * Get FileSystem stats
  * 
@@ -109,7 +202,8 @@ Value getStatFS(const CallbackInfo& info) {
     }
 
     Object ret = Object::New(env);
-    ret.Set("type", Number::New(env, stat.f_type));
+    ret.Set("typeId", Number::New(env, stat.f_type));
+    ret.Set("type", getFileSystemType(stat.f_type));
     ret.Set("bsize", Number::New(env, stat.f_bsize));
     ret.Set("blocks", Number::New(env, stat.f_blocks));
     ret.Set("bfree", Number::New(env, stat.f_bfree));
@@ -140,7 +234,7 @@ Value getStatFS(const CallbackInfo& info) {
  */
 Value getDiskStats(const CallbackInfo& info) {
     Env env = info.Env();
-    char line[256], dev_name[100];
+    char line[256], dev_name[256];
     int returnedElements;
     unsigned int ios_pgr, tot_ticks, rq_ticks, wr_ticks;
 	unsigned long rd_ios, rd_merges_or_rd_sec, rd_ticks_or_wr_sec, wr_ios;

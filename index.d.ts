@@ -10,7 +10,8 @@ declare namespace Nixfs {
     }
 
     interface fsstat {
-        type: number;
+        type: string;
+        typeId: number;
         bsize: number;
         blocks: number;
         bfree: number;
