@@ -288,30 +288,24 @@ Value getDiskStats(const CallbackInfo& info) {
 
         Object JSObject = Object::New(env);
         ret[i] = JSObject;
-        if (returnedElements == 14) {
+        if(returnedElements >= 7) {
             JSObject.Set("devName", dstat->devName);
-            JSObject.Set("major", dstat->major);
-            JSObject.Set("minor", dstat->minor);
             JSObject.Set("rdIos", dstat->rd_ios);
             JSObject.Set("rdMergesOrRdSec", dstat->rd_merges_or_rd_sec);
-            JSObject.Set("rdSecOrWrIos", dstat->rd_sec_or_wr_ios);
-            JSObject.Set("rdTicksOrWrSec", dstat->rd_ticks_or_wr_sec);
             JSObject.Set("wrIos", dstat->wr_ios);
+            JSObject.Set("rdTicksOrWrSec", dstat->rd_ticks_or_wr_sec);
+            i++;
+        }
+        if (returnedElements >= 14) {
+            JSObject.Set("major", dstat->major);
+            JSObject.Set("minor", dstat->minor);
+            JSObject.Set("rdSecOrWrIos", dstat->rd_sec_or_wr_ios);
             JSObject.Set("wrMerges", dstat->wr_merges);
             JSObject.Set("wrSec", dstat->wr_sec);
             JSObject.Set("wrTicks", dstat->wr_ticks);
             JSObject.Set("iosPgr", dstat->ios_pgr);
             JSObject.Set("totTicks", dstat->tot_ticks);
             JSObject.Set("rqTicks", dstat->rq_ticks);
-            i++;
-        }
-        else if(returnedElements == 7) {
-            JSObject.Set("devName", dstat->devName);
-            JSObject.Set("rdIos", dstat->rd_ios);
-            JSObject.Set("rdMergesOrRdSec", dstat->rd_merges_or_rd_sec);
-            JSObject.Set("wrIos", dstat->wr_ios);
-            JSObject.Set("rdTicksOrWrSec", dstat->rd_ticks_or_wr_sec);
-            i++;
         }
     }
     free(dstat);
