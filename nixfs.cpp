@@ -7,6 +7,15 @@
 #if __FreeBSD__
 #include <sys/param.h>
 #include <sys/mount.h>
+
+struct statfs {
+    char* devName;
+    char* dirName;
+    char* type;
+    char* options;
+    unsigned int freq;
+    unsigned int passno;
+};
 #else
 #include <sys/statfs.h>
 #include <mntent.h>
@@ -33,8 +42,8 @@ Value getMountedEntries(const CallbackInfo& info) {
 
     // On FreeBSD there is no mntent API (so we have to read local file /etc/fstab)
     #if __FreeBSD__
-        char line[256], devName[256], dirName[255], type[20], options[255];
-        unsigned int freq, passno;
+        char line[256];
+        statfs* fstat = (statfs*) malloc(sizeof(statfs));
 
         auto fd = fopen("/etc/fstab", "r");
         if (fd == NULL) {
@@ -49,18 +58,21 @@ Value getMountedEntries(const CallbackInfo& info) {
 
         // Iterate all available lines
         while (fgets(line, sizeof(line), fd) != NULL) {
-            sscanf(line, "%s %s %s %s %u %u", devName, dirName, type, options, &freq, &passno);
+            sscanf(line, "%s %s %s %s %u %u", 
+                fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
 
             Object FS = Object::New(env);
             ret[i] = FS;
-            FS.Set("dir", dirName);
-            FS.Set("name", devName);
-            FS.Set("type", type);
-            FS.Set("freq", freq);
-            FS.Set("passno", passno);
-            FS.Set("opts", options);
+            FS.Set("dir", fstat->dirName);
+            FS.Set("name", fstat->devName);
+            FS.Set("type", fstat->type);
+            FS.Set("freq", fstat->freq);
+            FS.Set("passno", fstat->passno);
+            FS.Set("opts", fstat->options);
             i++;
         }
+
+        free(fstat);
         fclose(fd);
     #else
         struct mntent *mountedFS;
@@ -215,14 +227,14 @@ Value getStatFS(const CallbackInfo& info) {
     }
 
     Object ret = Object::New(env);
-    ret.Set("typeId", Number::New(env, stat.f_type));
+    ret.Set("typeId", stat.f_type);
     ret.Set("type", getFileSystemType(stat.f_type));
-    ret.Set("bsize", Number::New(env, stat.f_bsize));
-    ret.Set("blocks", Number::New(env, stat.f_blocks));
-    ret.Set("bfree", Number::New(env, stat.f_bfree));
-    ret.Set("bavail", Number::New(env, stat.f_bavail));
-    ret.Set("files", Number::New(env, stat.f_files));
-    ret.Set("ffree", Number::New(env, stat.f_ffree));
+    ret.Set("bsize", stat.f_bsize);
+    ret.Set("blocks", stat.f_blocks);
+    ret.Set("bfree", stat.f_bfree);
+    ret.Set("bavail", stat.f_bavail);
+    ret.Set("files", stat.f_files);
+    ret.Set("ffree", stat.f_ffree);
     ret.Set("availableSpace", Number::New(env, stat.f_bsize * stat.f_bavail));
 
     // On FreeBSD statfs struct is not identical
