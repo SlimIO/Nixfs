@@ -1,6 +1,8 @@
 #include "napi.h"
 #include <sstream>
+#include <iostream>
 #include <errno.h>
+#include <stdlib.h>
 
 #if __FreeBSD__
 #include <sys/param.h>
@@ -238,6 +240,23 @@ Value getStatFS(const CallbackInfo& info) {
     return ret;
 }
 
+struct diskstat {
+    char* devName;
+    unsigned int major;
+    unsigned int minor;
+    unsigned int ios_pgr;
+    unsigned int tot_ticks;
+    unsigned int rq_ticks;
+    unsigned int wr_ticks;
+    unsigned long rd_ios;
+    unsigned long rd_merges_or_rd_sec;
+    unsigned long rd_ticks_or_wr_sec;
+    unsigned long wr_ios;
+    unsigned long wr_merges;
+    unsigned long rd_sec_or_wr_ios;
+    unsigned long wr_sec;
+};
+
 /**
  * Read /proc/diskstats
  * 
@@ -246,13 +265,9 @@ Value getStatFS(const CallbackInfo& info) {
  */
 Value getDiskStats(const CallbackInfo& info) {
     Env env = info.Env();
-    char line[256], dev_name[256];
     int returnedElements;
-    unsigned int ios_pgr, tot_ticks, rq_ticks, wr_ticks;
-	unsigned long rd_ios, rd_merges_or_rd_sec, rd_ticks_or_wr_sec, wr_ios;
-	unsigned long wr_merges, rd_sec_or_wr_ios, wr_sec;
-    unsigned int major, minor;
     unsigned i = 0;
+    char line[256];
 
     auto fd = fopen("/proc/diskstats", "r");
     if (fd == NULL) {
@@ -262,41 +277,44 @@ Value getDiskStats(const CallbackInfo& info) {
         return env.Null();
     }
 
+    diskstat* dstat = (diskstat*) malloc(sizeof(diskstat));
     Array ret = Array::New(env);
     while (fgets(line, sizeof(line), fd) != NULL) {
         returnedElements = sscanf(line, "%u %u %s %lu %lu %lu %lu %lu %lu %lu %u %u %u %u",
-			   &major, &minor, dev_name,
-			   &rd_ios, &rd_merges_or_rd_sec, &rd_sec_or_wr_ios, &rd_ticks_or_wr_sec,
-			   &wr_ios, &wr_merges, &wr_sec, &wr_ticks, &ios_pgr, &tot_ticks, &rq_ticks);
+			   &dstat->major, &dstat->minor, dstat->devName,
+			   &dstat->rd_ios, &dstat->rd_merges_or_rd_sec, &dstat->rd_sec_or_wr_ios, &dstat->rd_ticks_or_wr_sec,
+			   &dstat->wr_ios, &dstat->wr_merges, &dstat->wr_sec, &dstat->wr_ticks,
+               &dstat->ios_pgr, &dstat->tot_ticks, &dstat->rq_ticks);
 
         Object JSObject = Object::New(env);
         ret[i] = JSObject;
         if (returnedElements == 14) {
-            JSObject.Set("devName", dev_name);
-            JSObject.Set("major", major);
-            JSObject.Set("minor", minor);
-            JSObject.Set("rdIos", rd_ios);
-            JSObject.Set("rdMergesOrRdSec", rd_merges_or_rd_sec);
-            JSObject.Set("rdSecOrWrIos", rd_sec_or_wr_ios);
-            JSObject.Set("rdTicksOrWrSec", rd_ticks_or_wr_sec);
-            JSObject.Set("wrIos", wr_ios);
-            JSObject.Set("wrMerges", wr_merges);
-            JSObject.Set("wrSec", wr_sec);
-            JSObject.Set("wrTicks", wr_ticks);
-            JSObject.Set("iosPgr", ios_pgr);
-            JSObject.Set("totTicks", tot_ticks);
-            JSObject.Set("rqTicks", rq_ticks);
+            JSObject.Set("devName", dstat->devName);
+            JSObject.Set("major", dstat->major);
+            JSObject.Set("minor", dstat->minor);
+            JSObject.Set("rdIos", dstat->rd_ios);
+            JSObject.Set("rdMergesOrRdSec", dstat->rd_merges_or_rd_sec);
+            JSObject.Set("rdSecOrWrIos", dstat->rd_sec_or_wr_ios);
+            JSObject.Set("rdTicksOrWrSec", dstat->rd_ticks_or_wr_sec);
+            JSObject.Set("wrIos", dstat->wr_ios);
+            JSObject.Set("wrMerges", dstat->wr_merges);
+            JSObject.Set("wrSec", dstat->wr_sec);
+            JSObject.Set("wrTicks", dstat->wr_ticks);
+            JSObject.Set("iosPgr", dstat->ios_pgr);
+            JSObject.Set("totTicks", dstat->tot_ticks);
+            JSObject.Set("rqTicks", dstat->rq_ticks);
             i++;
         }
         else if(returnedElements == 7) {
-            JSObject.Set("devName", dev_name);
-            JSObject.Set("rdIos", rd_ios);
-            JSObject.Set("rdMergesOrRdSec", rd_merges_or_rd_sec);
-            JSObject.Set("wrIos", wr_ios);
-            JSObject.Set("rdTicksOrWrSec", rd_ticks_or_wr_sec);
+            JSObject.Set("devName", dstat->devName);
+            JSObject.Set("rdIos", dstat->rd_ios);
+            JSObject.Set("rdMergesOrRdSec", dstat->rd_merges_or_rd_sec);
+            JSObject.Set("wrIos", dstat->wr_ios);
+            JSObject.Set("rdTicksOrWrSec", dstat->rd_ticks_or_wr_sec);
             i++;
         }
     }
+    free(dstat);
     fclose(fd);
 
     return ret;
