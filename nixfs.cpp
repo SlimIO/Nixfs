@@ -1,8 +1,6 @@
 #include "napi.h"
 #include <sstream>
-#include <iostream>
 #include <errno.h>
-#include <string>
 
 #if __FreeBSD__
 #include <sys/param.h>
@@ -18,7 +16,12 @@ using namespace std;
 /**
  * Get UNIX mounted entries
  * 
- * @header: mntent.h
+ * @header: errno.h
+ * @header[linux]: mntent.h
+ * @header[freebsd]: sys/param.h
+ * @header[freebsd]: sys/mount.h
+ * 
+ * @doc: http://debian-facile.org/doc:systeme:fstab
  * @doc: http://man7.org/linux/man-pages/man3/getmntent.3.html
  */
 Value getMountedEntries(const CallbackInfo& info) {
@@ -26,7 +29,7 @@ Value getMountedEntries(const CallbackInfo& info) {
     unsigned i = 0;
     Array ret = Array::New(env);
 
-    // On FreeBSD there is no mntent API (so we read /etc/fstab directly!)
+    // On FreeBSD there is no mntent API (so we have to read local file /etc/fstab)
     #if __FreeBSD__
         char line[256], devName[256], dirName[255], type[20], options[255];
         unsigned int freq, passno;
@@ -41,8 +44,11 @@ Value getMountedEntries(const CallbackInfo& info) {
 
         // Remove first line of the file (which contains tab info).
         fgets(line, sizeof(line), fd);
+
+        // Iterate all available lines
         while (fgets(line, sizeof(line), fd) != NULL) {
             sscanf(line, "%s %s %s %s %u %u", devName, dirName, type, options, &freq, &passno);
+
             Object FS = Object::New(env);
             ret[i] = FS;
             FS.Set("dir", dirName);
@@ -76,6 +82,10 @@ Value getMountedEntries(const CallbackInfo& info) {
     return ret;
 }
 
+/**
+ * Get the File System with the type id (long).
+ * @doc: @doc: http://www.tutorialspoint.com/unix_system_calls/statfs.htm
+ */
 const char* getFileSystemType(long type) {
     switch(type) {
         case 0xadf5:
@@ -173,6 +183,7 @@ const char* getFileSystemType(long type) {
  * Get FileSystem stats
  * 
  * @header: sys/statfs.h
+ * @header: errno.h
  * @doc: http://www.tutorialspoint.com/unix_system_calls/statfs.htm
  */
 Value getStatFS(const CallbackInfo& info) {
@@ -185,13 +196,13 @@ Value getStatFS(const CallbackInfo& info) {
         return env.Null();
     }
 
-    // callback should be a Napi::Function
+    // fsPath should be a Napi::String
     if (!info[0].IsString()) {
         Error::New(env, "argument fsPath should be a String!").ThrowAsJavaScriptException();
         return env.Null();
     }
 
-    // Retrieve FS Path!
+    // Retrieve fsPath javascript argument
     string fsPath = info[0].As<String>().Utf8Value();
 
     if (statfs(fsPath.c_str(), &stat) == -1) {
@@ -212,7 +223,7 @@ Value getStatFS(const CallbackInfo& info) {
     ret.Set("ffree", Number::New(env, stat.f_ffree));
     ret.Set("availableSpace", Number::New(env, stat.f_bsize * stat.f_bavail));
 
-    // On FreeBSD the returned struct is not the same
+    // On FreeBSD statfs struct is not identical
     #if __FreeBSD__
         ret.Set("nameLen", Number::New(env, stat.f_namemax));
     #else
@@ -230,6 +241,7 @@ Value getStatFS(const CallbackInfo& info) {
 /**
  * Read /proc/diskstats
  * 
+ * @header: errno.h
  * @doc: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
  */
 Value getDiskStats(const CallbackInfo& info) {
