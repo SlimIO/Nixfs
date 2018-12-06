@@ -13,6 +13,14 @@
     "report": "nyc report --reporter=html",
     "install": "node-gyp rebuild"
   },
+  "nyc": {
+    "check-coverage": true,
+    "per-file": false,
+    "lines": 98,
+    "statements": 98,
+    "functions": 98,
+    "branches": 90
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SlimIO/Nixfs.git"
