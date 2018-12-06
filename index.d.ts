@@ -19,7 +19,7 @@ declare namespace Nixfs {
         files: number;
         ffree: number;
         availableSpace: number;
-        fsid: [number, number];
+        fsid?: [number, number];
         nameLen: number;
     }
 

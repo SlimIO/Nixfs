@@ -24,6 +24,27 @@ struct statfs {
 using namespace Napi;
 using namespace std;
 
+/*
+ * Get UNIX mounted entries Asynchronous Worker
+ */
+class MountedEntriesWorker : public AsyncWorker {
+    public:
+        MountedEntriesWorker(Function& callback) : AsyncWorker(callback) {}
+        ~MountedEntriesWorker() {}
+
+    // This code will be executed on the worker thread
+    void Execute() {
+    }
+
+    void OnOK() {
+        HandleScope scope(Env());
+        Array ret = Array::New(Env());
+
+        Callback().Call({Env().Null(), ret});
+    }
+
+};
+
 /**
  * Get UNIX mounted entries
  * 
