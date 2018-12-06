@@ -1,5 +1,5 @@
 /** @type {Nixfs} */
-const nixfs = require("bindings")("nixfs");
+const nixfs = require("node-gyp-build")(__dirname);
 
 const nfs = nixfs.getMountedEntries();
 for (const fs of nfs) {
