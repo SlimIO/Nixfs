@@ -1,5 +1,6 @@
 // Require Third-party Dependencies
-const avaTest = require("ava");
+const ava = require("ava");
 
-// Require Micro
-const Nixfs = require("..");
+ava("default", (assert) => {
+    assert.pass();
+});
