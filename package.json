@@ -7,11 +7,13 @@
     "node": ">=10"
   },
   "scripts": {
+    "prepublishOnly": "pkg-ok",
+    "prebuilds": "prebuildify --napi",
+    "build": "cross-env node-gyp configure && node-gyp build",
     "test": "ava --verbose",
     "doc": "jsdoc -c ./jsdoc.json -r",
     "coverage": "nyc ava",
-    "report": "nyc report --reporter=html",
-    "install": "node-gyp rebuild"
+    "report": "nyc report --reporter=html"
   },
   "nyc": {
     "check-coverage": true,
