@@ -332,78 +332,116 @@ Value getStatFS(const CallbackInfo& info) {
     return env.Undefined();
 }
 
-struct diskstat {
-    char* devName;
-    unsigned int major;
-    unsigned int minor;
-    unsigned int ios_pgr;
-    unsigned int tot_ticks;
-    unsigned int rq_ticks;
-    unsigned int wr_ticks;
-    unsigned long rd_ios;
-    unsigned long rd_merges_or_rd_sec;
-    unsigned long rd_ticks_or_wr_sec;
-    unsigned long wr_ios;
-    unsigned long wr_merges;
-    unsigned long rd_sec_or_wr_ios;
-    unsigned long wr_sec;
-};
-
 /**
  * Read /proc/diskstats
  * 
  * @header: errno.h
  * @doc: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
  */
+class DiskStatsWorker : public AsyncWorker {
+    public:
+        DiskStatsWorker(Function& callback) : AsyncWorker(callback) {}
+        ~DiskStatsWorker() {}
+    private:
+        struct diskstat {
+            char* devName;
+            unsigned int major;
+            unsigned int minor;
+            unsigned int ios_pgr;
+            unsigned int tot_ticks;
+            unsigned int rq_ticks;
+            unsigned int wr_ticks;
+            unsigned long rd_ios;
+            unsigned long rd_merges_or_rd_sec;
+            unsigned long rd_ticks_or_wr_sec;
+            unsigned long wr_ios;
+            unsigned long wr_merges;
+            unsigned long rd_sec_or_wr_ios;
+            unsigned long wr_sec;
+        };
+
+        struct diskbinding {
+            string devName;
+            int returnedElements;
+        };
+
+        vector<diskbinding> entries;
+
+    void Execute() {
+        int returnedElements;
+        char line[256];
+
+        auto fd = fopen("/proc/diskstats", "r");
+        if (fd == NULL) {
+            return SetError("failed to open /proc/diskstats");
+        }
+
+        diskstat* dstat = (diskstat*) malloc(sizeof(diskstat));
+        while (fgets(line, sizeof(line), fd) != NULL) {
+            returnedElements = sscanf(line, "%u %u %s %lu %lu %lu %lu %lu %lu %lu %u %u %u %u",
+                &dstat->major, &dstat->minor, dstat->devName,
+                &dstat->rd_ios, &dstat->rd_merges_or_rd_sec, &dstat->rd_sec_or_wr_ios, &dstat->rd_ticks_or_wr_sec,
+                &dstat->wr_ios, &dstat->wr_merges, &dstat->wr_sec, &dstat->wr_ticks,
+                &dstat->ios_pgr, &dstat->tot_ticks, &dstat->rq_ticks);
+
+            entries.push_back({
+                string(dstat->devName),
+                returnedElements
+            });
+        }
+        free(dstat);
+        fclose(fd);
+    }
+
+    void OnError(const Error& e) {
+        stringstream error;
+        error << e.what() << ", error code: " << errno << endl;
+        Error::New(Env(), error.str()).ThrowAsJavaScriptException();
+    }
+
+    void OnOK() {
+        HandleScope scope(Env());
+        unsigned int j = 0;
+        Array ret = Array::New(Env());
+
+        for (size_t i = 0; i < entries.size(); i++) {
+            diskbinding stat = entries[i];
+            Object JSObject = Object::New(Env());
+            ret[j] = JSObject;
+    
+            if (stat.returnedElements >= 7) {
+                JSObject.Set("devName", stat.devName);
+                j++;
+            }
+        }
+
+        Callback().Call({Env().Null(), ret});
+    }
+
+};
+
+/**
+ * getDiskStats interface binding
+ */
 Value getDiskStats(const CallbackInfo& info) {
     Env env = info.Env();
-    int returnedElements;
-    unsigned i = 0;
-    char line[256];
 
-    auto fd = fopen("/proc/diskstats", "r");
-    if (fd == NULL) {
-        stringstream err;
-        err << "failed to open /proc/diskstats, error code: " << errno << endl;
-        Error::New(env, err.str()).ThrowAsJavaScriptException();
+    // Check argument length!
+    if (info.Length() < 1) {
+        Error::New(env, "Wrong number of argument provided!").ThrowAsJavaScriptException();
         return env.Null();
     }
 
-    diskstat* dstat = (diskstat*) malloc(sizeof(diskstat));
-    Array ret = Array::New(env);
-    while (fgets(line, sizeof(line), fd) != NULL) {
-        returnedElements = sscanf(line, "%u %u %s %lu %lu %lu %lu %lu %lu %lu %u %u %u %u",
-			   &dstat->major, &dstat->minor, dstat->devName,
-			   &dstat->rd_ios, &dstat->rd_merges_or_rd_sec, &dstat->rd_sec_or_wr_ios, &dstat->rd_ticks_or_wr_sec,
-			   &dstat->wr_ios, &dstat->wr_merges, &dstat->wr_sec, &dstat->wr_ticks,
-               &dstat->ios_pgr, &dstat->tot_ticks, &dstat->rq_ticks);
-
-        Object JSObject = Object::New(env);
-        ret[i] = JSObject;
-        if(returnedElements >= 7) {
-            JSObject.Set("devName", dstat->devName);
-            JSObject.Set("rdIos", dstat->rd_ios);
-            JSObject.Set("rdMergesOrRdSec", dstat->rd_merges_or_rd_sec);
-            JSObject.Set("wrIos", dstat->wr_ios);
-            JSObject.Set("rdTicksOrWrSec", dstat->rd_ticks_or_wr_sec);
-            i++;
-        }
-        if (returnedElements >= 14) {
-            JSObject.Set("major", dstat->major);
-            JSObject.Set("minor", dstat->minor);
-            JSObject.Set("rdSecOrWrIos", dstat->rd_sec_or_wr_ios);
-            JSObject.Set("wrMerges", dstat->wr_merges);
-            JSObject.Set("wrSec", dstat->wr_sec);
-            JSObject.Set("wrTicks", dstat->wr_ticks);
-            JSObject.Set("iosPgr", dstat->ios_pgr);
-            JSObject.Set("totTicks", dstat->tot_ticks);
-            JSObject.Set("rqTicks", dstat->rq_ticks);
-        }
+    // callback should be a Napi::Function
+    if (!info[0].IsFunction()) {
+        Error::New(env, "argument callback should be a Function!").ThrowAsJavaScriptException();
+        return env.Null();
     }
-    free(dstat);
-    fclose(fd);
 
-    return ret;
+    Function cb = info[0].As<Function>();
+    (new DiskStatsWorker(cb))->Queue();
+    
+    return env.Undefined();
 }
 
 /*

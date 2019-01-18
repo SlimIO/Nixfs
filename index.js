@@ -25,7 +25,20 @@ function getStatFS(dir) {
     });
 }
 
+function getDiskStats() {
+    return new Promise((resolve, reject) => {
+        nixfs.getDiskStats((err, stat) => {
+            if (err) {
+                return reject(err);
+            }
+
+            return resolve(stat);
+        });
+    });
+}
+
 module.exports = {
     getMountedEntries,
-    getStatFS
+    getStatFS,
+    getDiskStats
 };
