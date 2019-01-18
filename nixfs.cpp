@@ -41,12 +41,12 @@ class MountedEntriesWorker : public AsyncWorker {
         ~MountedEntriesWorker() {}
     private:
         struct Mount {
-            char* dir;
-            char* name;
-            char* type;
+            string dir;
+            string name;
+            string type;
             unsigned int freq;
             unsigned int passno;
-            char* options;
+            string options;
         };
         vector<Mount> entries;
 
@@ -69,12 +69,12 @@ class MountedEntriesWorker : public AsyncWorker {
                     fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
 
                 entries.push_back({
-                    fstat->dirName,
-                    fstat->devName,
-                    fstat->type,
+                    string(fstat->dirName),
+                    string(fstat->devName),
+                    string(fstat->type),
                     fstat->freq,
                     fstat->passno,
-                    fstat->options
+                    string(fstat->options)
                 });
             }
 
@@ -87,12 +87,12 @@ class MountedEntriesWorker : public AsyncWorker {
             fileHandle = setmntent(_PATH_MOUNTED, "r");
             while ((mountedFS = getmntent(fileHandle))) {
                 entries.push_back({
-                    mountedFS->mnt_dir,
-                    mountedFS->mnt_fsname,
-                    mountedFS->mnt_type,
+                    string(mountedFS->mnt_dir),
+                    string(mountedFS->mnt_fsname),
+                    string(mountedFS->mnt_type),
                     (unsigned int) mountedFS->mnt_freq,
                     (unsigned int) mountedFS->mnt_passno,
-                    mountedFS->mnt_opts
+                    string(mountedFS->mnt_opts)
                 });
             }
             endmntent(fileHandle);
@@ -111,8 +111,6 @@ class MountedEntriesWorker : public AsyncWorker {
 
         for(size_t i = 0; i < entries.size(); i++) {
             Mount mnt = entries[i];
-            cout << "mnt dir: " << mnt.dir << endl;
-
             Object entry = Object::New(Env());
             entry.Set("dir", mnt.dir);
             entry.Set("name", mnt.name);
