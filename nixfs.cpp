@@ -24,29 +24,8 @@ struct statfs {
 using namespace Napi;
 using namespace std;
 
-/*
- * Get UNIX mounted entries Asynchronous Worker
- */
-class MountedEntriesWorker : public AsyncWorker {
-    public:
-        MountedEntriesWorker(Function& callback) : AsyncWorker(callback) {}
-        ~MountedEntriesWorker() {}
-
-    // This code will be executed on the worker thread
-    void Execute() {
-    }
-
-    void OnOK() {
-        HandleScope scope(Env());
-        Array ret = Array::New(Env());
-
-        Callback().Call({Env().Null(), ret});
-    }
-
-};
-
 /**
- * Get UNIX mounted entries
+ * Get UNIX mounted entries Asynchronous Worker
  * 
  * @header: errno.h
  * @header[linux]: mntent.h
@@ -56,65 +35,120 @@ class MountedEntriesWorker : public AsyncWorker {
  * @doc: http://debian-facile.org/doc:systeme:fstab
  * @doc: http://man7.org/linux/man-pages/man3/getmntent.3.html
  */
+class MountedEntriesWorker : public AsyncWorker {
+    public:
+        MountedEntriesWorker(Function& callback) : AsyncWorker(callback) {}
+        ~MountedEntriesWorker() {}
+    private:
+        struct Mount {
+            char* dir;
+            char* name;
+            char* type;
+            unsigned int freq;
+            unsigned int passno;
+            char* options;
+        };
+        vector<Mount> entries;
+
+    // This code will be executed on the worker thread
+    void Execute() {
+        #if __FreeBSD__
+            char line[256];
+            statfs* fstat = (statfs*) malloc(sizeof(statfs));
+
+            auto fd = fopen("/etc/fstab", "r");
+            if (fd == NULL) {
+                return SetError("failed to open /etc/fstab");
+            }
+
+            // Remove first line of the file (which contains tab info).
+            fgets(line, sizeof(line), fd);
+
+            // Iterate all available lines
+            while (fgets(line, sizeof(line), fd) != NULL) {
+                sscanf(line, "%s %s %s %s %u %u", 
+                    fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
+
+                entries.push_back(Mount{
+                    fstat->dirName,
+                    fstat->devName,
+                    fstat->type,
+                    fstat->freq,
+                    fstat->passno,
+                    fstat->options
+                });
+            }
+
+            free(fstat);
+            fclose(fd);
+        #else
+            struct mntent *mountedFS;
+            FILE *fileHandle;
+
+            fileHandle = setmntent(_PATH_MOUNTED, "r");
+            while ((mountedFS = getmntent(fileHandle))) {
+                entries.push_back(Mount{
+                    mountedFS->mnt_dir,
+                    mountedFS->mnt_fsname,
+                    mountedFS->mnt_type,
+                    (unsigned int) mountedFS->mnt_freq,
+                    (unsigned int) mountedFS->mnt_passno,
+                    mountedFS->mnt_opts
+                });
+            }
+            endmntent(fileHandle);
+        #endif
+    }
+
+    void OnError(const Error& e) {
+        stringstream error;
+        error << e.what() << ", error code: " << errno << endl;
+        Error::New(Env(), error.str()).ThrowAsJavaScriptException();
+    }
+
+    void OnOK() {
+        HandleScope scope(Env());
+        Array ret = Array::New(Env());
+
+        for(size_t i = 0; i < entries.size(); i++) {
+            Mount mnt = entries[i];
+            Object entry = Object::New(Env());
+            entry.Set("dir", mnt.dir);
+            entry.Set("name", mnt.name);
+            entry.Set("type", mnt.type);
+            entry.Set("freq", mnt.freq);
+            entry.Set("passno", mnt.passno);
+            entry.Set("options", mnt.options);
+            ret[i] = entry;
+        }
+
+        Callback().Call({Env().Null(), ret});
+    }
+
+};
+
+/**
+ * Get UNIX mounted entries (binding interface)
+ */
 Value getMountedEntries(const CallbackInfo& info) {
     Env env = info.Env();
-    unsigned i = 0;
-    Array ret = Array::New(env);
 
-    // On FreeBSD there is no mntent API (so we have to read local file /etc/fstab)
-    #if __FreeBSD__
-        char line[256];
-        statfs* fstat = (statfs*) malloc(sizeof(statfs));
+    // Check argument length!
+    if (info.Length() < 1) {
+        Error::New(env, "Wrong number of argument provided!").ThrowAsJavaScriptException();
+        return env.Null();
+    }
 
-        auto fd = fopen("/etc/fstab", "r");
-        if (fd == NULL) {
-            stringstream err;
-            err << "failed to open /etc/fstab, error code: " << errno << endl;
-            Error::New(env, err.str()).ThrowAsJavaScriptException();
-            return env.Null();
-        }
+    // callback should be a Napi::Function
+    if (!info[0].IsFunction()) {
+        Error::New(env, "argument callback should be a Function!").ThrowAsJavaScriptException();
+        return env.Null();
+    }
 
-        // Remove first line of the file (which contains tab info).
-        fgets(line, sizeof(line), fd);
-
-        // Iterate all available lines
-        while (fgets(line, sizeof(line), fd) != NULL) {
-            sscanf(line, "%s %s %s %s %u %u", 
-                fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
-
-            Object FS = Object::New(env);
-            ret[i] = FS;
-            FS.Set("dir", fstat->dirName);
-            FS.Set("name", fstat->devName);
-            FS.Set("type", fstat->type);
-            FS.Set("freq", fstat->freq);
-            FS.Set("passno", fstat->passno);
-            FS.Set("opts", fstat->options);
-            i++;
-        }
-
-        free(fstat);
-        fclose(fd);
-    #else
-        struct mntent *mountedFS;
-        FILE *fileHandle;
-
-        fileHandle = setmntent(_PATH_MOUNTED, "r");
-        while ((mountedFS = getmntent(fileHandle))) {
-            Object FS = Object::New(env);
-            ret[i] = FS;
-            FS.Set("dir", mountedFS->mnt_dir);
-            FS.Set("name", mountedFS->mnt_fsname);
-            FS.Set("type", mountedFS->mnt_type);
-            FS.Set("freq", mountedFS->mnt_freq);
-            FS.Set("passno", mountedFS->mnt_passno);
-            FS.Set("opts", mountedFS->mnt_opts);
-            i++;
-        }
-        endmntent(fileHandle);
-    #endif
-
-    return ret;
+    Function cb = info[0].As<Function>();
+    (new MountedEntriesWorker(cb))->Queue();
+    
+    return env.Undefined();
 }
 
 /**
