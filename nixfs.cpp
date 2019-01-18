@@ -382,7 +382,7 @@ Value getDiskStats(const CallbackInfo& info) {
 }
 
 /*
- * Initialize Node.JS Binding exports
+ * Initialize Node.js Binding exports
  * 
  * @header: napi.h
  */
