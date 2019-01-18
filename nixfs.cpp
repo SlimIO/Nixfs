@@ -50,7 +50,6 @@ class MountedEntriesWorker : public AsyncWorker {
         };
         vector<Mount> entries;
 
-    // This code will be executed on the worker thread
     void Execute() {
         #if __FreeBSD__
             char line[256];
@@ -69,7 +68,7 @@ class MountedEntriesWorker : public AsyncWorker {
                 sscanf(line, "%s %s %s %s %u %u", 
                     fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
 
-                entries.push_back(Mount{
+                entries.push_back({
                     fstat->dirName,
                     fstat->devName,
                     fstat->type,
@@ -87,7 +86,7 @@ class MountedEntriesWorker : public AsyncWorker {
 
             fileHandle = setmntent(_PATH_MOUNTED, "r");
             while ((mountedFS = getmntent(fileHandle))) {
-                entries.push_back(Mount{
+                entries.push_back({
                     mountedFS->mnt_dir,
                     mountedFS->mnt_fsname,
                     mountedFS->mnt_type,
@@ -112,6 +111,8 @@ class MountedEntriesWorker : public AsyncWorker {
 
         for(size_t i = 0; i < entries.size(); i++) {
             Mount mnt = entries[i];
+            cout << "mnt dir: " << mnt.dir << endl;
+
             Object entry = Object::New(Env());
             entry.Set("dir", mnt.dir);
             entry.Set("name", mnt.name);
@@ -249,18 +250,67 @@ const char* getFileSystemType(long type) {
 }
 
 /**
- * Get FileSystem stats
+ * Get FileSystem stats Asynchronous Worker
  * 
  * @header: sys/statfs.h
  * @header: errno.h
  * @doc: http://www.tutorialspoint.com/unix_system_calls/statfs.htm
  */
+class StatFSWorker : public AsyncWorker {
+    public:
+        StatFSWorker(Function& callback, string fsPath) : AsyncWorker(callback), fsPath(fsPath) {}
+        ~StatFSWorker() {}
+    private:
+        string fsPath;
+        struct statfs stat;
+
+    void Execute() {
+        if (statfs(fsPath.c_str(), &stat) == -1) {
+            stringstream error;
+            error << "statsfs failed for path: " << fsPath << ", error code: " << errno << "\n";
+            SetError(error.str());
+        }
+    }
+
+    void OnOK() {
+        HandleScope scope(Env());
+
+        Object ret = Object::New(Env());
+        ret.Set("typeId", stat.f_type);
+        ret.Set("type", getFileSystemType(stat.f_type));
+        ret.Set("bsize", stat.f_bsize);
+        ret.Set("blocks", stat.f_blocks);
+        ret.Set("bfree", stat.f_bfree);
+        ret.Set("bavail", stat.f_bavail);
+        ret.Set("files", stat.f_files);
+        ret.Set("ffree", stat.f_ffree);
+        ret.Set("availableSpace", Number::New(Env(), stat.f_bsize * stat.f_bavail));
+
+        // On FreeBSD statfs struct is not identical
+        #if __FreeBSD__
+            ret.Set("nameLen", Number::New(Env(), stat.f_namemax));
+        #else
+            Array fsid = Array::New(Env(), (size_t) 2);
+            for (unsigned i = 0; i<2; i++) {
+                fsid[i] = stat.f_fsid.__val[i];
+            }
+            ret.Set("fsid", fsid);
+            ret.Set("nameLen", Number::New(Env(), stat.f_namelen));
+        #endif
+
+        Callback().Call({Env().Null(), ret});
+    }
+
+};
+
+/**
+ * Get FileSystem stats (interface binding)
+ */
 Value getStatFS(const CallbackInfo& info) {
     Env env = info.Env();
-    struct statfs stat;
 
     // Check argument length!
-    if (info.Length() < 1) {
+    if (info.Length() < 2) {
         Error::New(env, "Wrong number of argument provided!").ThrowAsJavaScriptException();
         return env.Null();
     }
@@ -271,40 +321,17 @@ Value getStatFS(const CallbackInfo& info) {
         return env.Null();
     }
 
-    // Retrieve fsPath javascript argument
-    string fsPath = info[0].As<String>().Utf8Value();
-
-    if (statfs(fsPath.c_str(), &stat) == -1) {
-        stringstream err;
-        err << "statfs failed with error code: " << errno << endl;
-        Error::New(env, err.str()).ThrowAsJavaScriptException();
+    // callback should be a Napi::Function
+    if (!info[1].IsFunction()) {
+        Error::New(env, "argument callback should be a Function!").ThrowAsJavaScriptException();
         return env.Null();
     }
 
-    Object ret = Object::New(env);
-    ret.Set("typeId", stat.f_type);
-    ret.Set("type", getFileSystemType(stat.f_type));
-    ret.Set("bsize", stat.f_bsize);
-    ret.Set("blocks", stat.f_blocks);
-    ret.Set("bfree", stat.f_bfree);
-    ret.Set("bavail", stat.f_bavail);
-    ret.Set("files", stat.f_files);
-    ret.Set("ffree", stat.f_ffree);
-    ret.Set("availableSpace", Number::New(env, stat.f_bsize * stat.f_bavail));
-
-    // On FreeBSD statfs struct is not identical
-    #if __FreeBSD__
-        ret.Set("nameLen", Number::New(env, stat.f_namemax));
-    #else
-        Array fsid = Array::New(env, (size_t) 2);
-        for (unsigned i = 0; i<2; i++) {
-            fsid[i] = stat.f_fsid.__val[i];
-        }
-        ret.Set("fsid", fsid);
-        ret.Set("nameLen", Number::New(env, stat.f_namelen));
-    #endif
-
-    return ret;
+    string fsPath = info[0].As<String>().Utf8Value();
+    Function cb = info[1].As<Function>();
+    (new StatFSWorker(cb, fsPath))->Queue();
+    
+    return env.Undefined();
 }
 
 struct diskstat {

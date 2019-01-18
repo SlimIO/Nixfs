@@ -40,9 +40,9 @@ declare namespace Nixfs {
         rqTicks: number;
     }
 
-    export function getMountedEntries(): mountentry[];
-    export function getStatFS(dir: string): fsstat;
-    export function getDiskStats(): diskstat[];
+    export function getMountedEntries(): Promise<mountentry[]>;
+    export function getStatFS(dir: string): Promise<fsstat>;
+    export function getDiskStats(): Promise<diskstat[]>;
 }
 
 export as namespace Nixfs;
