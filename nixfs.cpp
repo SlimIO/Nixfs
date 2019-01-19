@@ -53,28 +53,36 @@ class MountedEntriesWorker : public AsyncWorker {
     void Execute() {
         #if __FreeBSD__
             char line[256];
-            statfs* fstat = (statfs*) malloc(sizeof(statfs));
 
             auto fd = fopen("/etc/fstab", "r");
             if (fd == NULL) {
                 return SetError("failed to open /etc/fstab");
             }
 
-            // Remove first line of the file (which contains tab info).
-            fgets(line, sizeof(line), fd);
+            statfs* fstat = (statfs*) malloc(sizeof(statfs));
+            try {
+                // Remove first line of the file (which contains tab info).
+                fgets(line, sizeof(line), fd);
 
-            while (fgets(line, sizeof(line), fd) != NULL) {
-                sscanf(line, "%s %s %s %s %u %u", 
-                    fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
+                while (fgets(line, sizeof(line), fd) != NULL) {
+                    sscanf(line, "%s %s %s %s %u %u", 
+                        fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
 
-                entries.push_back({
-                    string(fstat->dirName),
-                    string(fstat->devName),
-                    string(fstat->type),
-                    fstat->freq,
-                    fstat->passno,
-                    string(fstat->options)
-                });
+                    entries.push_back({
+                        string(fstat->dirName),
+                        string(fstat->devName),
+                        string(fstat->type),
+                        fstat->freq,
+                        fstat->passno,
+                        string(fstat->options)
+                    });
+                }
+            }
+            catch (const std::exception& e) {
+                free(fstat);
+                fclose(fd);
+
+                return SetError(e.what());
             }
 
             free(fstat);
@@ -366,18 +374,27 @@ class DiskStatsWorker : public AsyncWorker {
         }
 
         diskstat* dstat = (diskstat*) malloc(sizeof(diskstat));
-        while (fgets(line, sizeof(line), fd) != NULL) {
-            returnedElements = sscanf(line, "%u %u %s %lu %lu %lu %lu %lu %lu %lu %u %u %u %u",
-                &dstat->major, &dstat->minor, dstat->devName,
-                &dstat->rd_ios, &dstat->rd_merges_or_rd_sec, &dstat->rd_sec_or_wr_ios, &dstat->rd_ticks_or_wr_sec,
-                &dstat->wr_ios, &dstat->wr_merges, &dstat->wr_sec, &dstat->wr_ticks,
-                &dstat->ios_pgr, &dstat->tot_ticks, &dstat->rq_ticks);
+        try {
+            while (fgets(line, sizeof(line), fd) != NULL) {
+                returnedElements = sscanf(line, "%u %u %s %lu %lu %lu %lu %lu %lu %lu %u %u %u %u",
+                    &dstat->major, &dstat->minor, dstat->devName,
+                    &dstat->rd_ios, &dstat->rd_merges_or_rd_sec, &dstat->rd_sec_or_wr_ios, &dstat->rd_ticks_or_wr_sec,
+                    &dstat->wr_ios, &dstat->wr_merges, &dstat->wr_sec, &dstat->wr_ticks,
+                    &dstat->ios_pgr, &dstat->tot_ticks, &dstat->rq_ticks);
 
-            entries.push_back({
-                string(dstat->devName),
-                returnedElements
-            });
+                entries.push_back({
+                    string(dstat->devName),
+                    returnedElements
+                });
+            }
         }
+        catch (std::exception &e) {
+            free(dstat);
+            fclose(fd);
+
+            return SetError(e.what());
+        }
+
         free(dstat);
         fclose(fd);
     }
