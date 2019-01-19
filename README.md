@@ -96,5 +96,8 @@ interface diskstat {
 }
 ```
 
+## Developer Guide
+If you want to contribute but don't know how to compile etc.. Take a look at this [documentation](./BUILD.md)
+
 ## Licence
 MIT
