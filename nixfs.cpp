@@ -1,8 +1,6 @@
 #include "napi.h"
 #include <sstream>
-#include <iostream>
 #include <errno.h>
-#include <stdlib.h>
 
 #if __FreeBSD__
 #include <sys/param.h>
@@ -25,7 +23,9 @@ using namespace Napi;
 using namespace std;
 
 /**
- * Get UNIX mounted entries Asynchronous Worker
+ * Asynchronous Worker
+ * @name MountedEntriesWorker
+ * @desc Get UNIX mounted entries
  * 
  * @header: errno.h
  * @header[linux]: mntent.h
@@ -40,7 +40,7 @@ class MountedEntriesWorker : public AsyncWorker {
         MountedEntriesWorker(Function& callback) : AsyncWorker(callback) {}
         ~MountedEntriesWorker() {}
     private:
-        struct Mount {
+        struct MountedEntry {
             string dir;
             string name;
             string type;
@@ -48,7 +48,7 @@ class MountedEntriesWorker : public AsyncWorker {
             unsigned int passno;
             string options;
         };
-        vector<Mount> entries;
+        vector<MountedEntry> entries;
 
     void Execute() {
         #if __FreeBSD__
@@ -63,7 +63,6 @@ class MountedEntriesWorker : public AsyncWorker {
             // Remove first line of the file (which contains tab info).
             fgets(line, sizeof(line), fd);
 
-            // Iterate all available lines
             while (fgets(line, sizeof(line), fd) != NULL) {
                 sscanf(line, "%s %s %s %s %u %u", 
                     fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
@@ -110,15 +109,16 @@ class MountedEntriesWorker : public AsyncWorker {
         Array ret = Array::New(Env());
 
         for(size_t i = 0; i < entries.size(); i++) {
-            Mount mnt = entries[i];
+            MountedEntry mnt = entries[i];
             Object entry = Object::New(Env());
+            ret[i] = entry;
+
             entry.Set("dir", mnt.dir);
             entry.Set("name", mnt.name);
             entry.Set("type", mnt.type);
             entry.Set("freq", mnt.freq);
             entry.Set("passno", mnt.passno);
             entry.Set("options", mnt.options);
-            ret[i] = entry;
         }
 
         Callback().Call({Env().Null(), ret});
@@ -151,7 +151,7 @@ Value getMountedEntries(const CallbackInfo& info) {
 }
 
 /**
- * Get the File System with the type id (long).
+ * Get the File System Name with the type id (long).
  * @doc: @doc: http://www.tutorialspoint.com/unix_system_calls/statfs.htm
  */
 const char* getFileSystemType(long type) {
@@ -248,7 +248,9 @@ const char* getFileSystemType(long type) {
 }
 
 /**
- * Get FileSystem stats Asynchronous Worker
+ * Asynchronous Worker
+ * @name StatFSWorker
+ * @desc Get (retrieve) a given FileSystem directory stats 
  * 
  * @header: sys/statfs.h
  * @header: errno.h
@@ -285,6 +287,7 @@ class StatFSWorker : public AsyncWorker {
         ret.Set("availableSpace", Number::New(Env(), stat.f_bsize * stat.f_bavail));
 
         // On FreeBSD statfs struct is not identical
+        // field 'fsid' is missing, f_namemax instead of f_namelen for 'nameLen' field.
         #if __FreeBSD__
             ret.Set("nameLen", Number::New(Env(), stat.f_namemax));
         #else
@@ -333,7 +336,9 @@ Value getStatFS(const CallbackInfo& info) {
 }
 
 /**
- * Read /proc/diskstats
+ * Asynchronous Worker
+ * @name DiskStatsWorker
+ * @desc Retrieve disks stats by reading /proc/diskstats
  * 
  * @header: errno.h
  * @doc: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
