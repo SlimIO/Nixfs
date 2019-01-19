@@ -132,15 +132,8 @@ class MountedEntriesWorker : public AsyncWorker {
 Value getMountedEntries(const CallbackInfo& info) {
     Env env = info.Env();
 
-    // Check argument length!
-    if (info.Length() < 1) {
-        Error::New(env, "Wrong number of argument provided!").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    // callback should be a Napi::Function
     if (!info[0].IsFunction()) {
-        Error::New(env, "argument callback should be a Function!").ThrowAsJavaScriptException();
+        Error::New(env, "argument callback must be a Function!").ThrowAsJavaScriptException();
         return env.Null();
     }
 
@@ -310,21 +303,12 @@ class StatFSWorker : public AsyncWorker {
 Value getStatFS(const CallbackInfo& info) {
     Env env = info.Env();
 
-    // Check argument length!
-    if (info.Length() < 2) {
-        Error::New(env, "Wrong number of argument provided!").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    // fsPath should be a Napi::String
     if (!info[0].IsString()) {
-        Error::New(env, "argument fsPath should be a String!").ThrowAsJavaScriptException();
+        Error::New(env, "argument fsPath must be a String!").ThrowAsJavaScriptException();
         return env.Null();
     }
-
-    // callback should be a Napi::Function
     if (!info[1].IsFunction()) {
-        Error::New(env, "argument callback should be a Function!").ThrowAsJavaScriptException();
+        Error::New(env, "argument callback must be a Function!").ThrowAsJavaScriptException();
         return env.Null();
     }
 
@@ -431,15 +415,8 @@ class DiskStatsWorker : public AsyncWorker {
 Value getDiskStats(const CallbackInfo& info) {
     Env env = info.Env();
 
-    // Check argument length!
-    if (info.Length() < 1) {
-        Error::New(env, "Wrong number of argument provided!").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    // callback should be a Napi::Function
     if (!info[0].IsFunction()) {
-        Error::New(env, "argument callback should be a Function!").ThrowAsJavaScriptException();
+        Error::New(env, "argument callback must be a Function!").ThrowAsJavaScriptException();
         return env.Null();
     }
 
