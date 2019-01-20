@@ -49,7 +49,7 @@ interface mountentry {
     type: string;
     freq: number;
     passno: number;
-    opts: string;
+    options: string[];
 }
 ```
 
