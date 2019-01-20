@@ -17,7 +17,7 @@ ava("retrieve mounted entries", async(assert) => {
         assert.true(is.string(ent.dir));
         assert.true(is.string(ent.name));
         assert.true(is.string(ent.type));
-        assert.true(is.string(ent.options));
+        assert.true(is.array(ent.options));
         assert.true(is.number(ent.freq));
         assert.true(is.number(ent.passno));
     }

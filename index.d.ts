@@ -6,7 +6,7 @@ declare namespace Nixfs {
         type: string;
         freq: number;
         passno: number;
-        options: string;
+        options: string[];
     }
 
     interface fsstat {

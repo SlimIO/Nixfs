@@ -1,5 +1,6 @@
 #include "napi.h"
 #include <sstream>
+#include <iostream>
 #include <errno.h>
 
 #if __FreeBSD__
@@ -46,7 +47,7 @@ class MountedEntriesWorker : public AsyncWorker {
             string type;
             unsigned int freq;
             unsigned int passno;
-            string options;
+            vector<string> options;
         };
         vector<MountedEntry> entries;
 
@@ -68,13 +69,20 @@ class MountedEntriesWorker : public AsyncWorker {
                     sscanf(line, "%s %s %s %s %u %u", 
                         fstat->devName, fstat->dirName, fstat->type, fstat->options, &fstat->freq, &fstat->passno);
 
+                    vector<string> opts;
+                    char* cA = strtok(fstat->options, ",");
+                    while(cA) {
+                        opts.push_back(string(cA));
+                        cA = strtok(NULL, ",");
+                    }
+
                     entries.push_back({
                         string(fstat->dirName),
                         string(fstat->devName),
                         string(fstat->type),
                         fstat->freq,
                         fstat->passno,
-                        string(fstat->options)
+                        opts
                     });
                 }
             }
@@ -93,13 +101,20 @@ class MountedEntriesWorker : public AsyncWorker {
 
             fileHandle = setmntent(_PATH_MOUNTED, "r");
             while ((mountedFS = getmntent(fileHandle))) {
+                vector<string> opts;
+                char* cA = strtok(mountedFS->mnt_opts, ",");
+                while(cA) {
+                    opts.push_back(string(cA));
+                    cA = strtok(NULL, ",");
+                }
+
                 entries.push_back({
                     string(mountedFS->mnt_dir),
                     string(mountedFS->mnt_fsname),
                     string(mountedFS->mnt_type),
                     (unsigned int) mountedFS->mnt_freq,
                     (unsigned int) mountedFS->mnt_passno,
-                    string(mountedFS->mnt_opts)
+                    opts
                 });
             }
             endmntent(fileHandle);
@@ -126,7 +141,12 @@ class MountedEntriesWorker : public AsyncWorker {
             entry.Set("type", mnt.type);
             entry.Set("freq", mnt.freq);
             entry.Set("passno", mnt.passno);
-            entry.Set("options", mnt.options);
+
+            Array options = Array::New(Env());
+            for (size_t j = 0; j < mnt.options.size(); j++) {
+                options[j] = mnt.options[j];
+            }
+            entry.Set("options", options);
         }
 
         Callback().Call({Env().Null(), ret});
