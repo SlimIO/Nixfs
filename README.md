@@ -1,14 +1,19 @@
 # Nixfs
+![V1.0](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![N-API](https://img.shields.io/badge/N--API-v3-green.svg)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/SlimIO/Nixfs/commit-activity)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/SlimIO/Nixmem/blob/master/LICENSE)
-![V1.0](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![N-API](https://img.shields.io/badge/N--API-experimental-orange.svg)
+![2DEP](https://img.shields.io/badge/Dependencies-2-yellow.svg)
 
 SlimIO Nixfs is a Node.js binding which bring information about filesystem configuration and consumption. This module has been designed for UNIX systems.
 
+## OS Support
+
 | Linux | FreeBSD | OpenBSD | Sun | Mac (OS X) |
 | --- | --- | --- | --- | --- |
-| ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| ✔️ | ⚠️ | ⚠️ | ⚠️ | ✔️ |
+
+> ⚠️ WORK IN PROGRESS
 
 ## Getting Started
 
@@ -39,7 +44,9 @@ main().catch(console.error);
 
 ## API
 
-### getMountedEntries(): Promise< mountentry[] >
+<details><summary>getMountedEntries(): Promise< mountentry[] ></summary>
+<br />
+
 Retrieve mounted entries on the local system. Return an array of `mountentry` object. On FreeBSD the data is retrieved by reading the `/etc/fstab` file.
 
 ```ts
@@ -52,8 +59,11 @@ interface mountentry {
     options: string[];
 }
 ```
+</details>
 
-### getStatFS(dir: string): Promise< fsstat >
+<details><summary>getStatFS(dir: string): Promise< fsstat ></summary>
+<br />
+
 Retrieve statistic for a given file system directory. Return an `fsstat` Object. It use UNIX [statfs](http://www.tutorialspoint.com/unix_system_calls/statfs.htm) under the hood.
 
 ```ts
@@ -73,8 +83,12 @@ interface fsstat {
 ```
 
 > Note: fsid is not available on freebsd!
+</details>
 
-### getDiskStats(): Promise< diskstat[] >
+
+<details><summary>getDiskStats(): Promise< diskstat[] ></summary>
+<br />
+
 Retrieve all Disks statistics. Return an array of `diskstat` object. The data is retrieved by reading the `/proc/diskstats` file (a documentation describing this file can be found [here](https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats))
 
 ```ts
@@ -95,9 +109,10 @@ interface diskstat {
     rqTicks: number;
 }
 ```
+</details>
 
-## Developer Guide
-If you want to contribute but don't know how to compile etc.. Take a look at this [documentation](./BUILD.md)
+## Contribution Guidelines
+To contribute to the project, please read the [code of conduct](https://github.com/SlimIO/Governance/blob/master/COC_POLICY.md) and the guide for [N-API compilation](https://github.com/SlimIO/Governance/blob/master/docs/native_addons.md).
 
-## Licence
+## License
 MIT
