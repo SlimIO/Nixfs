@@ -13,3 +13,4 @@ CONTRIBUTING.md
 tsconfig.json
 commitlint.config.js
 .vscode
+.travis.yml
