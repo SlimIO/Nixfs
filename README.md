@@ -12,7 +12,7 @@ SlimIO Nixfs is a Node.js binding which bring information about filesystem confi
 
 | Linux | FreeBSD | OpenBSD | Sun | Mac (OS X) |
 | --- | --- | --- | --- | --- |
-| ✔️ | ⚠️ | ⚠️ | ⚠️ | ✔️ |
+| ✔️ | ⚠️ | ⚠️ | ❌ | ❌ |
 
 > ⚠️ WORK IN PROGRESS
 
