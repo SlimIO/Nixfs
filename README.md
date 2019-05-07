@@ -16,6 +16,9 @@ SlimIO Nixfs is a Node.js binding which bring information about filesystem confi
 
 > ⚠️ WORK IN PROGRESS
 
+## Requirements
+- Node.js v10 or higher
+
 ## Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
@@ -29,7 +32,7 @@ $ yarn add @slimio/nixfs
 ## Usage example
 
 ```js
-const Nixfs = require("@slimio/nixfs"); 
+const Nixfs = require("@slimio/nixfs");
 
 async function main() {
     const mntEntries = await Nixfs.getMountedEntries();
