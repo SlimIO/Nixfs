@@ -4,6 +4,9 @@ coverage/
 build/
 prebuilds/
 .nyc_output/
+.circleci/
+.vscode/
+jsdoc/
 docs/
 jsdoc.json
 CONTRIBUTING.md
@@ -14,3 +17,7 @@ tsconfig.json
 commitlint.config.js
 .vscode
 .travis.yml
+.env
+CHANGELOG.md
+*.exe
+*.obj

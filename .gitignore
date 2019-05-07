@@ -60,7 +60,10 @@ typings/
 # next.js build output
 .next
 
-build
+docs/
+jsdoc/
+build/
+prebuilds/
 .exe
 .obj
-.vscode
+.vscode/
