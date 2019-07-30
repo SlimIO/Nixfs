@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * @namespace Nixfs
  */
@@ -6,7 +8,7 @@
 const nixfs = require("node-gyp-build")(__dirname);
 
 /**
- * @func getMountedEntries
+ * @function getMountedEntries
  * @exports Nixfs/getMountedEntries
  * @returns {Promise<Nixfs.mountentry[]>}
  */
@@ -23,9 +25,9 @@ function getMountedEntries() {
 }
 
 /**
- * @func getStatFS
+ * @function getStatFS
  * @exports Nixfs/getStatFS
- * @param {!String} dir dir
+ * @param {!string} dir dir
  * @returns {Promise<Nixfs.fsstat>}
  */
 function getStatFS(dir) {
@@ -41,7 +43,7 @@ function getStatFS(dir) {
 }
 
 /**
- * @func getDiskStats
+ * @function getDiskStats
  * @exports Nixfs/getDiskStats
  * @returns {Promise<Nixfs.diskstat[]>}
  */
