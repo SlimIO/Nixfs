@@ -36,6 +36,13 @@
     "binding",
     "napi"
   ],
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "binding.gyp",
+    "nixfs.cpp",
+    "include/*.h"
+  ],
   "author": "SlimIO",
   "license": "MIT",
   "gypfile": true,
