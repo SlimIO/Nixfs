@@ -4,7 +4,7 @@
   "description": "UNIX File System - NodeJS binding",
   "main": "index.js",
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "scripts": {
     "prepublishOnly": "pkg-ok",
