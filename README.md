@@ -1,10 +1,13 @@
 # Nixfs
-![V1.0](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![version](https://img.shields.io/badge/dynamic/json.svg?url=https://raw.githubusercontent.com/SlimIO/Nixfs/master/package.json&query=$.version&label=Version)
 ![N-API](https://img.shields.io/badge/N--API-v3-green.svg)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/SlimIO/Nixfs/commit-activity)
-[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/SlimIO/Nixmem/blob/master/LICENSE)
-![2DEP](https://img.shields.io/badge/Dependencies-2-yellow.svg)
-[![Build Status](https://travis-ci.com/SlimIO/Nixfs.svg?branch=master)](https://travis-ci.com/SlimIO/Nixfs) [![Greenkeeper badge](https://badges.greenkeeper.io/SlimIO/Nixfs.svg)](https://greenkeeper.io/)
+[![MIT](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/SlimIO/Nixfs/blob/master/LICENSE)
+![dep](https://img.shields.io/badge/Dependencies-2-yellow.svg)
+![size](https://img.shields.io/github/languages/code-size/SlimIO/Nixfs)
+![known vulnerabilities](https://img.shields.io/snyk/vulnerabilities/github/SlimIO/Nixfs)
+[![Build Status](https://travis-ci.com/SlimIO/Nixfs.svg?branch=master)](https://travis-ci.com/SlimIO/Nixfs)
+[![Greenkeeper badge](https://badges.greenkeeper.io/SlimIO/Nixfs.svg)](https://greenkeeper.io/)
 
 SlimIO Nixfs is a Node.js binding which bring information about filesystem configuration and consumption. This module has been designed for UNIX systems.
 
