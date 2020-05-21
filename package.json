@@ -74,6 +74,6 @@
     "node-gyp": "^6.1.0",
     "nyc": "^15.0.1",
     "pkg-ok": "^2.3.1",
-    "prebuildify": "^3.0.0"
+    "prebuildify": "^4.0.0"
   }
 }
