@@ -13,7 +13,9 @@
     "test": "ava --verbose",
     "doc": "jsdoc -c ./jsdoc.json -r -R ./README.md -P ./package.json --verbose",
     "coverage": "nyc npm test",
-    "report": "nyc report --reporter=html"
+    "report": "nyc report --reporter=html",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "nyc": {
     "check-coverage": true,
@@ -58,7 +60,8 @@
   },
   "dependencies": {
     "node-addon-api": "^3.0.0",
-    "node-gyp-build": "^4.2.2"
+    "node-gyp-build": "^4.2.2",
+    "snyk": "^1.323.2"
   },
   "devDependencies": {
     "@commitlint/cli": "^8.3.5",
@@ -75,5 +78,6 @@
     "nyc": "^15.0.1",
     "pkg-ok": "^2.3.1",
     "prebuildify": "^4.0.0"
-  }
+  },
+  "snyk": true
 }
